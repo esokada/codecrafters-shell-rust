@@ -11,11 +11,7 @@ fn main() {
     let stdin = io::stdin();
     let mut input = String::new();
     stdin.read_line(&mut input).unwrap();
-    if input.trim() == "exit 0".to_string() {
-        std::process::exit(0);
+    let output = input.trim().replace("echo ","");
+    println!("{}", output);
     }
-    else {
-    println!("{}: command not found", input.trim())
-    }
-}
 }

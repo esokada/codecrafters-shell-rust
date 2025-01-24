@@ -3,6 +3,7 @@ use std::io::{self, Write};
 
 fn main() {
     // Uncomment this block to pass the first stage
+    loop {
     print!("$ ");
     io::stdout().flush().unwrap();
 
@@ -11,5 +12,5 @@ fn main() {
     let mut input = String::new();
     stdin.read_line(&mut input).unwrap();
     println!("{}: command not found", input.trim())
-
+    }
 }

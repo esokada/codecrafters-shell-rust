@@ -11,7 +11,15 @@ fn main() {
     let stdin = io::stdin();
     let mut input = String::new();
     stdin.read_line(&mut input).unwrap();
-    let output = input.trim().replace("echo ","");
-    println!("{}", output);
+    if input.trim().starts_with("echo") {
+        let output = input.trim().replace("echo ","");
+        println!("{}", output);        
+    }
+    else if input.trim() == "exit 0" {
+        std::process::exit(0)
+    }
+    else {
+        println!("{}: command not found",input.trim())
+    }
     }
 }

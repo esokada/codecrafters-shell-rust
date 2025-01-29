@@ -19,7 +19,6 @@ fn main() {
     let line = input.trim();
     let line_vec: Vec<&str> = line.splitn(2," ").collect();
     let command = line_vec[0];
-    // problem: need to collect args but handle the case when there are no args
     let args = &line_vec[1..];
 
     match command {
@@ -34,9 +33,9 @@ fn main() {
              Some(item) => {
             let parent = item.parent().unwrap();
             let child = item.file_name().unwrap();
-            Command::new(child).current_dir(parent).args(args).spawn()
+            let output = Command::new(child).current_dir(parent).args(args).output()
             .expect("failed to execute process");
-            // println!("{:?}",status);
+            println!("{:?}",output)
              }
             None => {
                 println!("{} not found",command)

@@ -33,9 +33,14 @@ fn main() {
              Some(item) => {
             let parent = item.parent().unwrap();
             let child = item.file_name().unwrap();
-            let output = Command::new(child).current_dir(parent).args(args).output()
-            .expect("failed to execute process");
-            println!("{:?}",output)
+            let output = Command::new(child).current_dir(parent).args(args).output().unwrap();
+                        // .expect("failed to run process");
+            let stdout = String::from_utf8(output.stdout).unwrap();
+            println!("{}",stdout)
+            // let stdout = &output.unwrap().stdout;
+            // println!("{:?}",stdout);
+            // let unwrapped_output = output.stdout;
+            // println!("{}",unwrapped_output)
              }
             None => {
                 println!("{} not found",command)

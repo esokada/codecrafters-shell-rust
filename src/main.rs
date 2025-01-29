@@ -32,10 +32,11 @@ fn main() {
         },
         command => match find_executable_in_path(command) {
              Some(item) => {
-            // problem: this won't work for 0 or variable numbers of args
-             let status = Command::new(item).args(args).status()
+            let parent = item.parent().unwrap();
+            let child = item.file_name().unwrap();
+            Command::new(child).current_dir(parent).args(args).spawn()
             .expect("failed to execute process");
-            println!("{:?}",status);
+            // println!("{:?}",status);
              }
             None => {
                 println!("{} not found",command)

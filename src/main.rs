@@ -36,7 +36,7 @@ fn main() {
             let output = Command::new(child).current_dir(parent).args(args).output().unwrap();
                         // .expect("failed to run process");
             let stdout = String::from_utf8(output.stdout).unwrap();
-            print!("{}",stdout.trim());
+            println!("{}",stdout.trim());
             // let stdout = &output.unwrap().stdout;
             // println!("{:?}",stdout);
             // let unwrapped_output = output.stdout;

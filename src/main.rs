@@ -11,7 +11,7 @@ fn main() {
     io::stdout().flush().unwrap();
 
     // define builtins
-    let builtins = vec!["exit","echo","type","pwd"];
+    let builtins = vec!["exit","echo","type","pwd","cd"];
     // Wait for user input
     let stdin = io::stdin();
     let mut input = String::new();
@@ -27,6 +27,10 @@ fn main() {
         "pwd" => {
             let path = env::current_dir().unwrap();
             println!("{}",path.display());
+        }
+        "cd" => match env::set_current_dir(args[0]) {
+            Ok(_) => continue,
+            Err(_) => println!("cd: {}: No such file or directory",args[0])
         }
         "type" if builtins.contains(&args[0]) => println!("{} is a shell builtin",line_vec[1]),
         "type" => match find_executable_in_path(args[0]) {

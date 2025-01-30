@@ -28,6 +28,14 @@ fn main() {
             let path = env::current_dir().unwrap();
             println!("{}",path.display());
         }
+        "cd" if args[0] == "~" => {
+            let key = "HOME";
+            let value = env::var(key).unwrap();
+            match env::set_current_dir(value) {
+                Ok(_) => continue,
+                Err(_) => println!("couldn't move to home directory")
+            }
+        }
         "cd" => match env::set_current_dir(args[0]) {
             Ok(_) => continue,
             Err(_) => println!("cd: {}: No such file or directory",args[0])

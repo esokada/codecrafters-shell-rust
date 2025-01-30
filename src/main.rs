@@ -13,7 +13,7 @@ fn parse_args(args: &[&str]) -> Vec<String> {
     let mut inside_quote = false;
     let mut current_arg = String::new();
 
-    for c in my_args.chars() {
+    for (i,c) in my_args.chars().enumerate() {
         if !inside_quote {
             if c != '\'' && c != ' ' {
                 current_arg.push(c);
@@ -29,7 +29,10 @@ fn parse_args(args: &[&str]) -> Vec<String> {
             }   
         }
         else if inside_quote {
-            if c == '\'' {
+            if c == '\'' && my_args.chars().nth(i+1).unwrap_or_default() == '\'' {
+                inside_quote = false;
+            }
+            else if c == '\'' {
                 inside_quote = false;
                 result.push(current_arg.clone());
                 current_arg.clear();

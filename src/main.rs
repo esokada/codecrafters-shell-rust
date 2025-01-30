@@ -64,7 +64,10 @@ fn main() {
 
     match command {
         "exit" if parsed_args[0] == "0" => std::process::exit(0),
-        "echo" => println!("{}",parsed_args[0]),
+        "echo" => {
+            let joined = parsed_args.join(" ");
+            println!("{}",joined);
+        }
         "pwd" => {
             let path = env::current_dir().unwrap();
             println!("{}",path.display());

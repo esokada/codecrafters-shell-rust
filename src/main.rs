@@ -11,7 +11,7 @@ fn main() {
     io::stdout().flush().unwrap();
 
     // define builtins
-    let builtins = vec!["exit","echo","type"];
+    let builtins = vec!["exit","echo","type","pwd"];
     // Wait for user input
     let stdin = io::stdin();
     let mut input = String::new();

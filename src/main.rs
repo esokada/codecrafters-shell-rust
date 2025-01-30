@@ -1,11 +1,11 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
 use std::process::Command;
+use std::env;
 use pathsearch::find_executable_in_path;
 
 
 fn main() {
-    // Uncomment this block to pass the first stage
     loop {
     print!("$ ");
     io::stdout().flush().unwrap();
@@ -24,6 +24,10 @@ fn main() {
     match command {
         "exit" if args[0] == "0" => std::process::exit(0),
         "echo" => println!("{}",args[0]),
+        "pwd" => {
+            let path = env::current_dir().unwrap();
+            println!("{}",path.display());
+        }
         "type" if builtins.contains(&args[0]) => println!("{} is a shell builtin",line_vec[1]),
         "type" => match find_executable_in_path(args[0]) {
             Some(item) => println!("{} is {}", args[0],item.display()),
@@ -37,15 +41,10 @@ fn main() {
                         // .expect("failed to run process");
             let stdout = String::from_utf8(output.stdout).unwrap();
             println!("{}",stdout.trim());
-            // let stdout = &output.unwrap().stdout;
-            // println!("{:?}",stdout);
-            // let unwrapped_output = output.stdout;
-            // println!("{}",unwrapped_output)
              }
             None => {
                 println!("{}: command not found",command)
             }
-        // _ => println!("{}: command not found",line)
     }
 }
 }

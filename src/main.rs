@@ -43,7 +43,7 @@ fn main() {
             // println!("{}",unwrapped_output)
              }
             None => {
-                println!("{} not found",command)
+                println!("{}: command not found",command)
             }
         // _ => println!("{}: command not found",line)
     }

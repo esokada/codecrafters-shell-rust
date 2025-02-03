@@ -10,12 +10,13 @@ fn parse_args(args: &[&str]) -> Vec<String> {
         return result
     }
     let my_args = args[0];
-    let mut inside_quote = false;
+    let mut inside_single_quote = false;
+    let mut inside_double_quote = false;
     let mut current_arg = String::new();
 
     for (i,c) in my_args.chars().enumerate() {
-        if !inside_quote {
-            if c != '\'' && c != ' ' {
+        if !inside_single_quote && !inside_double_quote {
+            if c != '\'' && c != '\"' && c != ' ' {
                 current_arg.push(c);
             }         
             else if c == ' ' {
@@ -25,15 +26,31 @@ fn parse_args(args: &[&str]) -> Vec<String> {
                 }
             }
             else if c ==  '\'' {
-                inside_quote = true;
-            }   
+                inside_single_quote = true;
+            }
+            else if c == '\"' {
+                inside_double_quote = true;
+            }
         }
-        else if inside_quote {
+        else if inside_single_quote {
             if c == '\'' && my_args.chars().nth(i+1).unwrap_or_default() == '\'' {
-                inside_quote = false;
+                inside_single_quote = false;
             }
             else if c == '\'' {
-                inside_quote = false;
+                inside_single_quote = false;
+                result.push(current_arg.clone());
+                current_arg.clear();
+            }
+            else {
+                current_arg.push(c);
+            }            
+        }
+        else if inside_double_quote {
+            if c == '\"' && my_args.chars().nth(i+1).unwrap_or_default() == '\"' {
+                inside_double_quote = false;
+            }
+            else if c == '\"' {
+                inside_double_quote = false;
                 result.push(current_arg.clone());
                 current_arg.clear();
             }

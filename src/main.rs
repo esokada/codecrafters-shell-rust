@@ -15,7 +15,11 @@ fn parse_args(args: &[&str]) -> Vec<String> {
     let mut literal = false;
     let mut current_arg = String::new();
 
+    let literals_for_double_quotes = vec!["\\", "$", "\""];
+    let newlines = vec!["\\n", "\\r"];
+
     for (i,c) in my_args.chars().enumerate() {
+        let next_char = my_args.chars().nth(i+1).unwrap_or_default();
         if !inside_single_quote && !inside_double_quote {
             if literal == true {
                 current_arg.push(c);
@@ -44,7 +48,7 @@ fn parse_args(args: &[&str]) -> Vec<String> {
             }
         
         else if inside_single_quote {
-            if c == '\'' && my_args.chars().nth(i+1).unwrap_or_default() == '\'' {
+            if c == '\'' && next_char == '\'' {
                 inside_single_quote = false;
             }
             else if c == '\'' {
@@ -57,13 +61,27 @@ fn parse_args(args: &[&str]) -> Vec<String> {
             }            
         }
         else if inside_double_quote {
-            if c == '\"' && my_args.chars().nth(i+1).unwrap_or_default() == '\"' {
+            if literal == true {
+                current_arg.push(c);
+                literal = false;
+                continue
+
+            }
+            //todo: test if next_char in literals_for_double_quotes, newline
+            else if c == '\\' && literals_for_double_quotes.contains(&next_char.to_string().as_str()) || newlines.contains(&next_char.to_string().as_str())  {
+                literal = true;
+
+            }
+            else if c == '\"' && next_char == '\"' {
                 inside_double_quote = false;
             }
-            else if c == '\"' {
+            else if c == '\"' && next_char == ' '{
                 inside_double_quote = false;
                 result.push(current_arg.clone());
                 current_arg.clear();
+            }
+            else if c == '\"' {
+                continue
             }
             else {
                 current_arg.push(c);

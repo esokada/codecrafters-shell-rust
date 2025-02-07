@@ -4,12 +4,12 @@ use std::process::Command;
 use std::env;
 use pathsearch::find_executable_in_path;
 
-fn parse_args(args: &[&str]) -> Vec<String> {
+fn parse_command(args: &str) -> Vec<String> {
     let mut result:Vec<String> = Vec::new();
     if args.len() == 0 {
         return result
     }
-    let my_args = args[0];
+    // let args = args[0];
     let mut inside_single_quote = false;
     let mut inside_double_quote = false;
     let mut literal = false;
@@ -18,8 +18,8 @@ fn parse_args(args: &[&str]) -> Vec<String> {
     let literals_for_double_quotes = vec!["\\", "$", "\""];
     let newlines = vec!["\\n", "\\r"];
 
-    for (i,c) in my_args.chars().enumerate() {
-        let next_char = my_args.chars().nth(i+1).unwrap_or_default();
+    for (i,c) in args.chars().enumerate() {
+        let next_char = args.chars().nth(i+1).unwrap_or_default();
         if !inside_single_quote && !inside_double_quote {
             if literal == true {
                 current_arg.push(c);
@@ -106,12 +106,20 @@ fn main() {
     let mut input = String::new();
     stdin.read_line(&mut input).unwrap();
     let line = input.trim();
-    let line_vec: Vec<&str> = line.splitn(2," ").collect();
-    let command = line_vec[0];
-    let args = &line_vec[1..];
-    let parsed_args = parse_args(args);
+    // if line.starts_with('\'') || line.starts_with('\"') {
+    //     //get quoted exe name
+    //     // let quoted_exe_name = parse_args(line);
 
-    match command {
+    // }
+    // else case here
+    // let line_vec: Vec<&str> = line.splitn(2," ").collect();
+    // let command = line_vec[0];
+    // let args = &line_vec[1..];
+    let parsed_command = parse_command(line);
+    let exe = parsed_command[0].as_str();
+    let parsed_args = &parsed_command[1..];
+
+    match exe {
         "exit" if parsed_args[0] == "0" => std::process::exit(0),
         "echo" => {
             let joined = parsed_args.join(" ");
@@ -133,7 +141,7 @@ fn main() {
             Ok(_) => continue,
             Err(_) => println!("cd: {}: No such file or directory",parsed_args[0])
         }
-        "type" if builtins.contains(&parsed_args[0].as_str()) => println!("{} is a shell builtin",line_vec[1]),
+        "type" if builtins.contains(&parsed_args[0].as_str()) => println!("{} is a shell builtin",exe),
         "type" => match find_executable_in_path(&parsed_args[0]) {
             Some(item) => println!("{} is {}", parsed_args[0],item.display()),
             None => println!("{} not found",parsed_args[0])
@@ -157,11 +165,13 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_args;
+    use super::parse_command;
     #[test]
     fn test_parse_args() {
-        assert_eq!(parse_args(&["foo"]), vec!["foo".to_string()]);
-        assert_eq!(parse_args(&["foo 'hello world'"]), vec!["foo".to_string(), "hello world".to_string()]);
-        assert_eq!(parse_args(&["                          foo 'hello world' bar"]), vec!["foo".to_string(), "hello world".to_string(), "bar".to_string()]);
+        assert_eq!(parse_command("foo"), vec!["foo".to_string()]);
+        assert_eq!(parse_command("\"foo 'hello world'\""), vec!["foo 'hello world'".to_string()]);
+        assert_eq!(parse_command("\"foo 'hello world'\" bar"), vec!["foo 'hello world'".to_string(), "bar".to_string()]);
+        assert_eq!(parse_command("                          foo 'hello world' bar"), vec!["foo".to_string(), "hello world".to_string(), "bar".to_string()]);
+        
     }
 }

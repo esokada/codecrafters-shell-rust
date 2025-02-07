@@ -141,7 +141,7 @@ fn main() {
             Ok(_) => continue,
             Err(_) => println!("cd: {}: No such file or directory",parsed_args[0])
         }
-        "type" if builtins.contains(&parsed_args[0].as_str()) => println!("{} is a shell builtin",exe),
+        "type" if builtins.contains(&parsed_args[0].as_str()) => println!("{} is a shell builtin",&parsed_args[0]),
         "type" => match find_executable_in_path(&parsed_args[0]) {
             Some(item) => println!("{} is {}", parsed_args[0],item.display()),
             None => println!("{} not found",parsed_args[0])

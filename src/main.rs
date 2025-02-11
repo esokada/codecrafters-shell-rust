@@ -143,34 +143,17 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>) -> () 
             let output = Command::new(child).current_dir(parent).args(parsed_args).output().unwrap();
                         // .expect("failed to run process");
             let stdout = String::from_utf8(output.stdout).unwrap();
+            let stderr = String::from_utf8(output.stderr).unwrap();
             print_or_write(&format!("{}",stdout.trim()), output_file);
-             }
+             //NOTE: remember to move this to stderr_file instead
+            print_or_write(&format!("{}",stderr.trim()), output_file);
+            }            
             None => {
                 print_or_write(&format!("{}: command not found",command),output_file)
             }
     }
 }
 }
-
-// fn handle_redir<'a>(parsed_command: &mut Vec<String>, out_file: &mut Box<dyn Write>) -> Result<(),&'a str> {
-//     for i in 0..parsed_command.len() {
-//         if parsed_command[i] == "1>" || parsed_command[i] == ">" {
-//             if i+1 <parsed_command.len() {
-//                 //get the path
-//                 let path = Path::new(&parsed_command[i+1]);
-//                 //create the file
-//                 let file = File::create(path);
-//                 *out_file = Box::new(file);
-//                 //remove redirect (i) and path from the parsed command
-//                 parsed_command.drain(i..i+1);
-//             }
-//             else {
-//                 return Err("error handling redirect")
-//             }
-//         }
-//     }
-//     Ok(())
-// }
 
 fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Option<&String>) {
     // handle the writing etc. back in main
@@ -213,69 +196,6 @@ fn main() {
     // create the output file (if needed) and pass it into execute
     execute(exe, parsed_args, output_file);
     // execute in turn gives it to print_or_write
-
-
-
-    // match handle_redir(&mut parsed_command)
-    // {
-    //     Ok() => {},
-    //     Err() => println!("Encountered an error redirecting")
-    // }
-    // find out if 1> or > is in parsed args
-    // if parsed_args.iter().any(|x| redirects.contains(&x.as_str())) {
-    // if it is, send the part before it to an execute() function
-
-    // get the stdout output from the execute function
-    // oh snap, this means I have to capture it rather than just using println!
-    // get the desired location from the part after >
-    // write the output to the desired location
-    // }
-    // if no redirect, call execute normally
-    // else {
-    //     execute(exe, parsed_args);
-    // }
-
-//     match exe {
-//         "exit" if parsed_args[0] == "0" => std::process::exit(0),
-//         "echo" => {
-//             let joined = parsed_args.join(" ");
-//             println!("{}",joined);
-//         }
-//         "pwd" => {
-//             let path = env::current_dir().unwrap();
-//             println!("{}",path.display());
-//         }
-//         "cd" if parsed_args[0] == "~" => {
-//             let key = "HOME";
-//             let value = env::var(key).unwrap();
-//             match env::set_current_dir(value) {
-//                 Ok(_) => continue,
-//                 Err(_) => println!("couldn't move to home directory")
-//             }
-//         }
-//         "cd" => match env::set_current_dir(parsed_args[0].clone()) {
-//             Ok(_) => continue,
-//             Err(_) => println!("cd: {}: No such file or directory",parsed_args[0])
-//         }
-//         "type" if builtins.contains(&parsed_args[0].as_str()) => println!("{} is a shell builtin",&parsed_args[0]),
-//         "type" => match find_executable_in_path(&parsed_args[0]) {
-//             Some(item) => println!("{} is {}", parsed_args[0],item.display()),
-//             None => println!("{} not found",parsed_args[0])
-//         },
-//         command => match find_executable_in_path(command) {
-//              Some(item) => {
-//             let parent = item.parent().unwrap();
-//             let child = item.file_name().unwrap();
-//             let output = Command::new(child).current_dir(parent).args(parsed_args).output().unwrap();
-//                         // .expect("failed to run process");
-//             let stdout = String::from_utf8(output.stdout).unwrap();
-//             println!("{}",stdout.trim());
-//              }
-//             None => {
-//                 println!("{}: command not found",command)
-//             }
-//     }
-// }
 }
 }
 

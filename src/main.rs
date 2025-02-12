@@ -106,7 +106,7 @@ fn print_or_write(message: &str, out_file: Option<&String>) -> () {
     }
 }
 
-fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>) -> () {
+fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_file:Option<&String>) -> () {
     let builtins = vec!["exit","echo","type","pwd","cd"];
 
     match exe {
@@ -145,8 +145,7 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>) -> () 
             let stdout = String::from_utf8(output.stdout).unwrap();
             let stderr = String::from_utf8(output.stderr).unwrap();
             print_or_write(&format!("{}",stdout.trim()), output_file);
-             //NOTE: remember to move this to stderr_file instead
-            print_or_write(&format!("{}",stderr.trim()), output_file);
+            print_or_write(&format!("{}",stderr.trim()), error_file);
             }            
             None => {
                 print_or_write(&format!("{}: command not found",command),output_file)
@@ -155,16 +154,24 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>) -> () 
 }
 }
 
-fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Option<&String>) {
+fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Option<&String>, Option<&String>) {
     // handle the writing etc. back in main
     // is initializing variables as None with no type a good practice? 
-    let mut output = None;
+    let mut output_file = None;
+    let mut error_file = None;
     let mut new_command: Vec<String> = Vec::new();
     for i in 0..parsed_command.len() {
         if parsed_command[i] == "1>" || parsed_command[i] == ">" {  
             // make sure there's something after the redirector
             if i+1 < parsed_command.len() {
-                output = Some(&parsed_command[i+1]);
+                output_file = Some(&parsed_command[i+1]);
+                break
+            }
+        }
+        else if parsed_command[i] == "2>" {  
+            // make sure there's something after the redirector
+            if i+1 < parsed_command.len() {
+                error_file = Some(&parsed_command[i+1]);
                 break
             }
         }
@@ -172,7 +179,7 @@ fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Option<&String
             new_command.push(parsed_command[i].clone());
         }
     }
-    (new_command, output)
+    (new_command, output_file, error_file)
 }
 
 fn main() {
@@ -189,12 +196,12 @@ fn main() {
 
     // let mut out_file: Box<dyn Write> = Box::new(io::stdout());
     // never mind, handle the redirection before executing
-    let (parsed_command, output_file) = handle_redir(&mut parsed_command);
+    let (parsed_command, output_file, error_file) = handle_redir(&mut parsed_command);
     let exe = parsed_command[0].as_str();
     let parsed_args = &parsed_command[1..];
     //next problem: need to get output from execute() rather than println
     // create the output file (if needed) and pass it into execute
-    execute(exe, parsed_args, output_file);
+    execute(exe, parsed_args, output_file, error_file);
     // execute in turn gives it to print_or_write
 }
 }

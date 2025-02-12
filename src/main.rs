@@ -102,7 +102,8 @@ fn print_or_write(message: &str, out_file: Option<&String>) -> () {
             file_to_write.write(message.as_bytes()).expect("problem writing file");
 
         },    
-        None => println!("{message}")
+        None => {println!("{}",message.trim());
+    }
     }
 }
 
@@ -131,7 +132,7 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_
             Ok(_) => return,
             Err(_) => print_or_write(&format!("cd: {}: No such file or directory",parsed_args[0]),output_file)
         }
-        "type" if builtins.contains(&parsed_args[0].as_str()) => println!("{} is a shell builtin",&parsed_args[0]),
+        "type" if builtins.contains(&parsed_args[0].as_str()) => print_or_write(&format!("{} is a shell builtin",&parsed_args[0]), output_file),
         "type" => match find_executable_in_path(&parsed_args[0]) {
             Some(item) => print_or_write(&format!("{} is {}", parsed_args[0],item.display()), output_file),
             None => print_or_write(&format!("{} not found",parsed_args[0]),output_file)
@@ -140,12 +141,17 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_
              Some(item) => {
             let parent = item.parent().unwrap();
             let child = item.file_name().unwrap();
-            let output = Command::new(child).current_dir(parent).args(parsed_args).output().unwrap();
+            let curr_dir = env::current_dir().unwrap();
+            let output = Command::new(child).current_dir(curr_dir).args(parsed_args).output().unwrap();
                         // .expect("failed to run process");
             let stdout = String::from_utf8(output.stdout).unwrap();
             let stderr = String::from_utf8(output.stderr).unwrap();
+            if stdout.len() > 0 {
             print_or_write(&format!("{}",stdout.trim()), output_file);
+            }
+            if stderr.len() > 0 {
             print_or_write(&format!("{}",stderr.trim()), error_file);
+            }
             }            
             None => {
                 print_or_write(&format!("{}: command not found",command),output_file)
@@ -202,7 +208,6 @@ fn main() {
     //next problem: need to get output from execute() rather than println
     // create the output file (if needed) and pass it into execute
     execute(exe, parsed_args, output_file, error_file);
-    // execute in turn gives it to print_or_write
 }
 }
 

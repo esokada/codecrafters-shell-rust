@@ -146,7 +146,7 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_
         },
         command => match find_executable_in_path(command) {
              Some(item) => {
-            let parent = item.parent().unwrap();
+            // let parent = item.parent().unwrap();
             let child = item.file_name().unwrap();
             let curr_dir = env::current_dir().unwrap();
             let output = Command::new(child).current_dir(curr_dir).args(parsed_args).output().unwrap();

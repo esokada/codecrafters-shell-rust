@@ -115,7 +115,14 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_
         "echo" => {
             let joined = parsed_args.join(" ");
             print_or_write(&format!("{}",joined),output_file);
-        }
+            // this is hacky, also need to do this for rest of built-ins
+            match error_file {
+                Some (_) => print_or_write(&"",error_file),
+                None => ()
+            }
+                
+            }
+        
         "pwd" => {
             let path = env::current_dir().unwrap();
             print_or_write(&format!("{}", path.display()),output_file);

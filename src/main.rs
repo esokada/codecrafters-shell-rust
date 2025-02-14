@@ -41,7 +41,9 @@ impl Writer {
                     }
                 }
             },
-            WriterAction::Print => println!("{}",message),
+            WriterAction::Print => if message.len() > 0 {
+                println!("{}",message)
+            }
             // WriterAction::NoAction => ()
         }
     }
@@ -73,13 +75,16 @@ fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Writer, Writer
             }
         }
         else if parsed_command[i] == "2>>" {
-            todo!()
+            if i+1 < parsed_command.len() {
+                error_writer = Writer{action:WriterAction::Append,out_file: Some(parsed_command[i+1].clone())};
+                break
+            }
         }
         else {
             new_command.push(parsed_command[i].clone());
         }
     }
-    (new_command, output_writer, error_writer)
+    return (new_command, output_writer, error_writer);
 }
 
 fn parse_command(args: &str) -> Vec<String> {
@@ -171,22 +176,6 @@ fn parse_command(args: &str) -> Vec<String> {
     result
 }
 
-// fn print_or_write(message: &str, out_file: Option<&String>) -> () {
-//     // add logic here to switch writing or appending
-//     // make sure to not create/write over a file that already exists?
-//     match out_file {
-//         Some(out_file) => {
-//             Writer{action:WriterAction::Write,out_file:Some(out_file.to_string())}.do_write(message)
-//         },
-//         // Some(out_file) => {
-//         //     let mut file_to_write = File::create(out_file).expect("problem creating file");
-//         //     file_to_write.write(message.as_bytes()).expect("problem writing file");
-
-//         // },    
-//         // None => {println!("{}",message.trim());
-//         None => Writer{action: WriterAction::Print, out_file: None}.do_write(message),
-//     }
-//     }
 
 
 fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:Writer) -> () {
@@ -240,12 +229,12 @@ fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:
             let stdout = String::from_utf8(output.stdout).unwrap();
             let stderr = String::from_utf8(output.stderr).unwrap();
             //TODO: check whether output file exists instead
-            if stdout.len() > 0 {
+            // if stdout.len() > 0 {
             output_writer.do_write(&format!("{}",stdout.trim()));
-            }
-            if stderr.len() > 0 {
+            // }
+            // if stderr.len() > 0 {
             error_writer.do_write(&format!("{}",stderr.trim()));
-            }
+            // }
             }            
             None => {
                 error_writer.do_write(&format!("{}: command not found",command))

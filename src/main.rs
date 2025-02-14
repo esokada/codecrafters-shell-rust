@@ -1,10 +1,86 @@
 #[allow(unused_imports)]
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::process::Command;
 use std::{env, vec};
 use pathsearch::find_executable_in_path;
 
+enum WriterAction {
+    Write,
+    Append,
+    Print,
+    // NoAction
+}
+
+struct Writer {
+    action: WriterAction,
+    out_file: Option<String>,
+}
+
+impl Writer {
+    fn do_write(&self, message: &str) -> () {
+        match self.action {
+            WriterAction::Write => {
+                if let Some(file_path) = &self.out_file {
+                    let mut file_to_write = File::create(file_path)
+                        .expect("problem creating file");
+                    if message.len() > 0 {
+                    writeln!(file_to_write,"{}",message)
+                    // file_to_write.write(message.as_bytes())
+                        .expect("problem writing file")
+                    }
+                }
+            },
+            WriterAction::Append => {
+                if let Some(file_path) = &self.out_file {
+                    let mut file_to_app = OpenOptions::new().append(true).create(true).open(file_path).expect("problem opening file");
+                    if message.len() > 0 {
+                    writeln!(file_to_app,"{}",message).expect("problem appending to file");
+                    // file_to_app.write_all(message.as_bytes()).expect("problem appending to file");
+                    }
+                }
+            },
+            WriterAction::Print => println!("{}",message),
+            // WriterAction::NoAction => ()
+        }
+    }
+}
+
+fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Writer, Writer) {
+    let mut output_writer = Writer{action: WriterAction::Print, out_file: None};
+    let mut error_writer = Writer{action: WriterAction::Print, out_file: None};
+    let mut new_command: Vec<String> = Vec::new();
+    for i in 0..parsed_command.len() {
+        if parsed_command[i] == "1>" || parsed_command[i] == ">" {  
+            // make sure there's something after the redirector
+            if i+1 < parsed_command.len() {
+                output_writer = Writer{action:WriterAction::Write,out_file: Some(parsed_command[i+1].clone())};
+                break
+            }
+        }
+        else if parsed_command[i] == "2>" {  
+            // make sure there's something after the redirector
+            if i+1 < parsed_command.len() {
+                error_writer = Writer{action:WriterAction::Write,out_file: Some(parsed_command[i+1].clone())};
+                break
+            }
+        }
+        else if parsed_command[i] == ">>" || parsed_command[i] == "1>>" {
+            if i+1 < parsed_command.len() {
+                output_writer = Writer{action:WriterAction::Append,out_file: Some(parsed_command[i+1].clone())};
+                break
+            }
+        }
+        else if parsed_command[i] == "2>>" {
+            todo!()
+        }
+        else {
+            new_command.push(parsed_command[i].clone());
+        }
+    }
+    (new_command, output_writer, error_writer)
+}
 
 fn parse_command(args: &str) -> Vec<String> {
     let mut result:Vec<String> = Vec::new();
@@ -95,54 +171,64 @@ fn parse_command(args: &str) -> Vec<String> {
     result
 }
 
-fn print_or_write(message: &str, out_file: Option<&String>) -> () {
-    match out_file {
-        Some(out_file) => {
-            let mut file_to_write = File::create(out_file).expect("problem creating file");
-            file_to_write.write(message.as_bytes()).expect("problem writing file");
+// fn print_or_write(message: &str, out_file: Option<&String>) -> () {
+//     // add logic here to switch writing or appending
+//     // make sure to not create/write over a file that already exists?
+//     match out_file {
+//         Some(out_file) => {
+//             Writer{action:WriterAction::Write,out_file:Some(out_file.to_string())}.do_write(message)
+//         },
+//         // Some(out_file) => {
+//         //     let mut file_to_write = File::create(out_file).expect("problem creating file");
+//         //     file_to_write.write(message.as_bytes()).expect("problem writing file");
 
-        },    
-        None => {println!("{}",message.trim());
-    }
-    }
-}
+//         // },    
+//         // None => {println!("{}",message.trim());
+//         None => Writer{action: WriterAction::Print, out_file: None}.do_write(message),
+//     }
+//     }
 
-fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_file:Option<&String>) -> () {
+
+fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:Writer) -> () {
     let builtins = vec!["exit","echo","type","pwd","cd"];
 
     match exe {
         "exit" if parsed_args[0] == "0" => std::process::exit(0),
         "echo" => {
             let joined = parsed_args.join(" ");
-            print_or_write(&format!("{}",joined),output_file);
-            // this is hacky, also need to do this for rest of built-ins
-            match error_file {
-                Some (_) => print_or_write(&"",error_file),
-                None => ()
+            // print_or_write(&format!("{}",joined),output_file);
+            output_writer.do_write(&format!("{}",joined));
+            // PROBLEM: we only want to write the empty stderr when we're redirecting
+            // (we don't want to print an empty line to terminal)
+            // TEMPORARY FIX: check if the error_writer object has an out file
+            if error_writer.out_file.is_some() {
+                error_writer.do_write("");
             }
-                
-            }
-        
+            // match error_file {
+            //     Some (_) => print_or_write(&"",error_file),
+            //     None => ()
+            // }   
+            },      
         "pwd" => {
             let path = env::current_dir().unwrap();
-            print_or_write(&format!("{}", path.display()),output_file);
+            output_writer.do_write(&format!("{}", path.display()));
         }
         "cd" if parsed_args[0] == "~" => {
             let key = "HOME";
             let value = env::var(key).unwrap();
             match env::set_current_dir(value) {
                 Ok(_) => return,
-                Err(_) => print_or_write("couldn't move to home directory", output_file)
+                Err(_) => error_writer.do_write("couldn't move to home directory")
             }
         }
         "cd" => match env::set_current_dir(parsed_args[0].clone()) {
             Ok(_) => return,
-            Err(_) => print_or_write(&format!("cd: {}: No such file or directory",parsed_args[0]),output_file)
+            Err(_) => error_writer.do_write(&format!("cd: {}: No such file or directory",parsed_args[0]))
         }
-        "type" if builtins.contains(&parsed_args[0].as_str()) => print_or_write(&format!("{} is a shell builtin",&parsed_args[0]), output_file),
+        "type" if builtins.contains(&parsed_args[0].as_str()) => output_writer.do_write(&format!("{} is a shell builtin",&parsed_args[0])),
         "type" => match find_executable_in_path(&parsed_args[0]) {
-            Some(item) => print_or_write(&format!("{} is {}", parsed_args[0],item.display()), output_file),
-            None => print_or_write(&format!("{} not found",parsed_args[0]),output_file)
+            Some(item) => output_writer.do_write(&format!("{} is {}", parsed_args[0],item.display())),
+            None => error_writer.do_write(&format!("{} not found",parsed_args[0]))
         },
         command => match find_executable_in_path(command) {
              Some(item) => {
@@ -153,47 +239,22 @@ fn execute(exe: &str, parsed_args:&[String], output_file:Option<&String>, error_
                         // .expect("failed to run process");
             let stdout = String::from_utf8(output.stdout).unwrap();
             let stderr = String::from_utf8(output.stderr).unwrap();
+            //TODO: check whether output file exists instead
             if stdout.len() > 0 {
-            print_or_write(&format!("{}",stdout.trim()), output_file);
+            output_writer.do_write(&format!("{}",stdout.trim()));
             }
             if stderr.len() > 0 {
-            print_or_write(&format!("{}",stderr.trim()), error_file);
+            error_writer.do_write(&format!("{}",stderr.trim()));
             }
             }            
             None => {
-                print_or_write(&format!("{}: command not found",command),output_file)
+                error_writer.do_write(&format!("{}: command not found",command))
             }
     }
 }
 }
 
-fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Option<&String>, Option<&String>) {
-    // handle the writing etc. back in main
-    // is initializing variables as None with no type a good practice? 
-    let mut output_file = None;
-    let mut error_file = None;
-    let mut new_command: Vec<String> = Vec::new();
-    for i in 0..parsed_command.len() {
-        if parsed_command[i] == "1>" || parsed_command[i] == ">" {  
-            // make sure there's something after the redirector
-            if i+1 < parsed_command.len() {
-                output_file = Some(&parsed_command[i+1]);
-                break
-            }
-        }
-        else if parsed_command[i] == "2>" {  
-            // make sure there's something after the redirector
-            if i+1 < parsed_command.len() {
-                error_file = Some(&parsed_command[i+1]);
-                break
-            }
-        }
-        else {
-            new_command.push(parsed_command[i].clone());
-        }
-    }
-    (new_command, output_file, error_file)
-}
+
 
 fn main() {
     loop {
@@ -206,15 +267,10 @@ fn main() {
     stdin.read_line(&mut input).unwrap();
     let line = input.trim();
     let mut parsed_command = parse_command(line);
-
-    // let mut out_file: Box<dyn Write> = Box::new(io::stdout());
-    // never mind, handle the redirection before executing
-    let (parsed_command, output_file, error_file) = handle_redir(&mut parsed_command);
+    let (parsed_command, output_writer, error_writer) = handle_redir(&mut parsed_command);
     let exe = parsed_command[0].as_str();
     let parsed_args = &parsed_command[1..];
-    //next problem: need to get output from execute() rather than println
-    // create the output file (if needed) and pass it into execute
-    execute(exe, parsed_args, output_file, error_file);
+    execute(exe, parsed_args, output_writer, error_writer);
 }
 }
 

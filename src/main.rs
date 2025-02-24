@@ -5,6 +5,42 @@ use std::io::{self, Write};
 use std::process::Command;
 use std::{env, vec};
 use pathsearch::find_executable_in_path;
+// use rustyline::completion::Completer;
+// use rustyline::Helper;
+// use rustyline::Editor;
+// use rustyline::hint::Hinter;
+// use rustyline::{Completer, Helper, Hinter, Validator};
+// use rustyline::{Editor, Highlighter};
+use rustyline::completion::Completer;
+use rustyline::Editor;
+use rustyline_derive::{Helper, Highlighter, Hinter, Validator};
+
+struct MyCompleter {}
+
+// impl MyCompleter {
+// }
+
+#[derive(Helper, Hinter, Validator, Highlighter)]
+struct MyHelper {
+    //file_competer: FilenameCompleter,
+    builtin_completer: MyCompleter
+}
+
+impl Completer for MyHelper {
+    type Candidate = String;
+
+    fn complete(
+            &self,
+            line: &str,
+            _pos: usize,
+            _ctx: &rustyline::Context<'_>,
+        ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
+        //TODO: move builtins somewhere else
+        let builtins = ["exit","echo","type","pwd","cd"];
+        let completions = builtins.iter().filter(|w| w.starts_with(line)).map(|s| s.to_string() + " ").collect();
+        Ok((0,completions))
+    }
+}
 
 enum WriterAction {
     Write,
@@ -246,14 +282,32 @@ fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:
 
 
 fn main() {
+    // let completer = MyCompleter {};
+    // let helper = MyHelper {builtin_completer};
+    // let mut rl = Editor::new().unwrap();
+    let helper = MyHelper {
+        builtin_completer: MyCompleter {}
+    };
+    let mut rl = Editor::new().unwrap();
+    rl.set_helper(Some(helper));
     loop {
+    // keep this
     print!("$ ");
     io::stdout().flush().unwrap();
 
     // Wait for user input
-    let stdin = io::stdin();
-    let mut input = String::new();
-    stdin.read_line(&mut input).unwrap();
+    //this gets handled by rustyline
+    // let stdin = io::stdin();
+    // let mut input = String::new();
+    // stdin.read_line(&mut input).unwrap();
+    let readline = rl.readline("$ ");
+    let input = match readline {
+        Ok(line) => line,
+        Err(err) => {
+        println!("Error reading line with rustyline: {:?}", err);
+        break;
+        }
+    };
     let line = input.trim();
     let mut parsed_command = parse_command(line);
     let (parsed_command, output_writer, error_writer) = handle_redir(&mut parsed_command);

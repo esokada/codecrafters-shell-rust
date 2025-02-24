@@ -12,6 +12,8 @@ use pathsearch::find_executable_in_path;
 // use rustyline::{Completer, Helper, Hinter, Validator};
 // use rustyline::{Editor, Highlighter};
 use rustyline::completion::Completer;
+use rustyline::Config;
+use rustyline::config::BellStyle;
 use rustyline::Editor;
 use rustyline_derive::{Helper, Highlighter, Hinter, Validator};
 
@@ -285,10 +287,11 @@ fn main() {
     // let completer = MyCompleter {};
     // let helper = MyHelper {builtin_completer};
     // let mut rl = Editor::new().unwrap();
+    let config = Config::builder().bell_style(BellStyle::Audible).build();
     let helper = MyHelper {
         builtin_completer: MyCompleter {}
     };
-    let mut rl = Editor::new().unwrap();
+    let mut rl = Editor::with_config(config).unwrap();
     rl.set_helper(Some(helper));
     loop {
     // keep this
@@ -296,7 +299,7 @@ fn main() {
     io::stdout().flush().unwrap();
 
     // Wait for user input
-    //this gets handled by rustyline
+    //this gets handled by rustyline now
     // let stdin = io::stdin();
     // let mut input = String::new();
     // stdin.read_line(&mut input).unwrap();

@@ -1,4 +1,5 @@
 #[allow(unused_imports)]
+use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{self, Write};
@@ -38,8 +39,29 @@ impl Completer for MyHelper {
             _ctx: &rustyline::Context<'_>,
         ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
         //TODO: move builtins somewhere else
+        //first try builtins
         let builtins = ["exit","echo","type","pwd","cd"];
-        let completions = builtins.iter().filter(|w| w.starts_with(line)).map(|s| s.to_string() + " ").collect();
+        let mut completions:Vec<String> = builtins.iter().filter(|w| w.starts_with(line)).map(|s| s.to_string() + " ").collect();
+        //if we don't find builtins, try executables in PATH
+        if completions.len() == 0 {
+            for path in std::env::var("PATH").unwrap().split(":") {
+                match fs::read_dir(path) {
+                    Ok(items) => {
+                        for item in items {
+                            let exe_name = item.unwrap().file_name();
+                            if exe_name.to_string_lossy().starts_with(line) {
+                                let name_string = exe_name.to_string_lossy();
+                                let mut name_with_space = name_string.into_owned();
+                                name_with_space.push(' ');
+                                completions.push(name_with_space);
+                            }
+                        }
+
+                    },
+                    Err(_) => continue
+                }
+            }
+        }
         Ok((0,completions))
     }
 }

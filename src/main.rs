@@ -6,13 +6,8 @@ use std::io::{self, Write};
 use std::process::Command;
 use std::{env, vec};
 use pathsearch::find_executable_in_path;
-// use rustyline::completion::Completer;
-// use rustyline::Helper;
-// use rustyline::Editor;
-// use rustyline::hint::Hinter;
-// use rustyline::{Completer, Helper, Hinter, Validator};
-// use rustyline::{Editor, Highlighter};
 use rustyline::completion::Completer;
+use rustyline::CompletionType;
 use rustyline::Config;
 use rustyline::config::BellStyle;
 use rustyline::Editor;
@@ -50,18 +45,31 @@ impl Completer for MyHelper {
                         for item in items {
                             let exe_name = item.unwrap().file_name();
                             if exe_name.to_string_lossy().starts_with(line) {
-                                let name_string = exe_name.to_string_lossy();
-                                let mut name_with_space = name_string.into_owned();
-                                name_with_space.push(' ');
-                                completions.push(name_with_space);
+                                let name_string = exe_name.to_string_lossy().into_owned();
+                                // let mut name_with_space = name_string.into_owned();
+                                // name_with_space.push(' ');
+                                // eliminate duplicates
+                                if !completions.contains(&name_string) {
+                                completions.push(name_string);
+                                }
                             }
                         }
-
+                    // completions.sort();
                     },
                     Err(_) => continue
                 }
             }
         }
+        if completions.len() == 1 && !completions[0].ends_with(' ') {
+            //add a space if this is the only completion and it doesn't already have a space
+            let mut new_word = completions[0].clone();
+            new_word.push(' ');
+            completions = vec![new_word];
+        }
+        else if completions.len() > 1 {
+            completions.sort();
+        }
+
         Ok((0,completions))
     }
 }
@@ -87,7 +95,6 @@ impl Writer {
                         .expect("problem creating file");
                     if message.len() > 0 {
                     writeln!(file_to_write,"{}",message)
-                    // file_to_write.write(message.as_bytes())
                         .expect("problem writing file")
                     }
                 }
@@ -97,7 +104,6 @@ impl Writer {
                     let mut file_to_app = OpenOptions::new().append(true).create(true).open(file_path).expect("problem opening file");
                     if message.len() > 0 {
                     writeln!(file_to_app,"{}",message).expect("problem appending to file");
-                    // file_to_app.write_all(message.as_bytes()).expect("problem appending to file");
                     }
                 }
             },
@@ -122,7 +128,6 @@ fn handle_redir(parsed_command:&mut Vec<String>) -> (Vec<String>, Writer, Writer
             }
         }
         else if parsed_command[i] == "2>" {  
-            // make sure there's something after the redirector
             if i+1 < parsed_command.len() {
                 error_writer = Writer{action:WriterAction::Write,out_file: Some(parsed_command[i+1].clone())};
                 break
@@ -245,18 +250,12 @@ fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:
         "exit" if parsed_args[0] == "0" => std::process::exit(0),
         "echo" => {
             let joined = parsed_args.join(" ");
-            // print_or_write(&format!("{}",joined),output_file);
             output_writer.do_write(&format!("{}",joined));
-            // PROBLEM: we only want to write the empty stderr when we're redirecting
-            // (we don't want to print an empty line to terminal)
-            // TEMPORARY FIX: check if the error_writer object has an out file
+            // only write the empty stderr when we're redirecting
+            // (don't print an empty line to the terminal)
             if error_writer.out_file.is_some() {
                 error_writer.do_write("");
             }
-            // match error_file {
-            //     Some (_) => print_or_write(&"",error_file),
-            //     None => ()
-            // }   
             },      
         "pwd" => {
             let path = env::current_dir().unwrap();
@@ -281,20 +280,13 @@ fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:
         },
         command => match find_executable_in_path(command) {
              Some(item) => {
-            // let parent = item.parent().unwrap();
             let child = item.file_name().unwrap();
             let curr_dir = env::current_dir().unwrap();
             let output = Command::new(child).current_dir(curr_dir).args(parsed_args).output().unwrap();
-                        // .expect("failed to run process");
             let stdout = String::from_utf8(output.stdout).unwrap();
             let stderr = String::from_utf8(output.stderr).unwrap();
-            //TODO: check whether output file exists instead
-            // if stdout.len() > 0 {
             output_writer.do_write(&format!("{}",stdout.trim()));
-            // }
-            // if stderr.len() > 0 {
             error_writer.do_write(&format!("{}",stderr.trim()));
-            // }
             }            
             None => {
                 error_writer.do_write(&format!("{}: command not found",command))
@@ -306,25 +298,17 @@ fn execute(exe: &str, parsed_args:&[String], output_writer:Writer, error_writer:
 
 
 fn main() {
-    // let completer = MyCompleter {};
-    // let helper = MyHelper {builtin_completer};
-    // let mut rl = Editor::new().unwrap();
-    let config = Config::builder().bell_style(BellStyle::Audible).build();
+    let config = Config::builder().bell_style(BellStyle::Audible).completion_type(CompletionType::List).build();
     let helper = MyHelper {
         builtin_completer: MyCompleter {}
     };
     let mut rl = Editor::with_config(config).unwrap();
     rl.set_helper(Some(helper));
-    loop {
+    'main_loop: loop {
     // keep this
     print!("$ ");
     io::stdout().flush().unwrap();
 
-    // Wait for user input
-    //this gets handled by rustyline now
-    // let stdin = io::stdin();
-    // let mut input = String::new();
-    // stdin.read_line(&mut input).unwrap();
     let readline = rl.readline("$ ");
     let input = match readline {
         Ok(line) => line,
